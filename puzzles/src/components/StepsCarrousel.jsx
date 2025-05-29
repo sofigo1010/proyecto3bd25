@@ -1,9 +1,9 @@
 // StepsCarousel.jsx
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { Button } from "./ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
+import { Card, CardHeader, CardTitle, CardContent } from "./ui/card"
 import {
   ChevronRight,
   ChevronLeft,
@@ -24,7 +24,7 @@ export default function StepsCarousel({
 }) {
   const [currentStep, setCurrentStep] = useState(0)
 
-  // Genera dinámicamente la lista de pasos a partir de las conexiones
+  // Construye la lista de pasos
   const steps = useMemo(() => {
     const list = []
 
@@ -32,21 +32,22 @@ export default function StepsCarousel({
     list.push({
       title: "🎯 Punto de partida",
       content: `Comienza con la pieza "${startingPiece}".${
-        hasMissingPieces
-          ? ` ⚠️ Te faltan: ${missingPieces}`
-          : ""
+        hasMissingPieces ? ` ⚠️ Te faltan: ${missingPieces}` : ""
       }`,
       tip: "Identifica y ubica tu pieza inicial antes de empezar.",
       icon: <Target className="h-6 w-6 text-blue-400" />,
     })
 
-    // Pasos intermedios: cada conexión
+    // Pasos intermedios: uno por cada conexión
     connections.forEach((c, i) => {
       list.push({
         title: `🔗 Paso ${i + 1}`,
         content: `Une la pieza "${c.from}" con "${c.to}".`,
-        tip: "Alinea bordes y patrones antes de encajar.",
-        icon: <CheckCircle className="h-6 w-6 text-green-400" />,
+        sidefrom: c.sidefrom,
+        sideto:   c.sideto,
+        comment:  c.comment,
+        tip:      c.comment || "Alinea bordes y patrones antes de encajar.",
+        icon:     <CheckCircle className="h-6 w-6 text-green-400" />,
       })
     })
 
@@ -58,6 +59,7 @@ export default function StepsCarousel({
       icon: <CheckCircle className="h-6 w-6 text-yellow-400" />,
     })
 
+    console.log("🛠️ steps array:", list)
     return list
   }, [
     puzzleName,
@@ -67,6 +69,11 @@ export default function StepsCarousel({
     missingPieces,
     connections,
   ])
+
+  // Loguea el paso actual al cambiar
+  useEffect(() => {
+    console.log(`🛠️ currentStep=${currentStep}`, steps[currentStep])
+  }, [currentStep, steps])
 
   const nextStep = () => {
     if (currentStep < steps.length - 1) {
@@ -95,7 +102,7 @@ export default function StepsCarousel({
           <Button
             onClick={onBack}
             variant="outline"
-            className="bg-gray-800 text-gray-300 hover:bg-gray-800 hover:text-white"
+            className="border-gray-600 text-gray-300 hover:bg-gray-800 hover:text-white"
           >
             <ArrowLeft className="h-4 w-4 mr-2" /> Volver al menú
           </Button>
@@ -130,10 +137,33 @@ export default function StepsCarousel({
             </CardTitle>
           </CardHeader>
 
-          <CardContent className="space-y-8">
+          <CardContent className="space-y-6">
+            {/* Contenido principal */}
             <p className="text-gray-300 text-xl leading-relaxed">
-              {step.content}
+              {step.content || "(sin contenido)"}
             </p>
+
+            {/* Lados (sidefrom / sideto) */}
+            {step.sidefrom && step.sideto && (
+              <div className="bg-gray-800/50 border border-gray-700 rounded-2xl p-4">
+                <p className="text-blue-200">
+                  🔄 Lado desde:{" "}
+                  <span className="font-semibold">{step.sidefrom}</span>, lado hasta:{" "}
+                  <span className="font-semibold">{step.sideto}</span>
+                </p>
+              </div>
+            )}
+
+            {/* Comentario específico */}
+            {step.comment && (
+              <div className="bg-gray-800/50 border border-gray-700 rounded-2xl p-4">
+                <p className="text-yellow-300 font-medium">
+                  💬 {step.comment}
+                </p>
+              </div>
+            )}
+
+            {/* Tip general */}
             <div className="bg-gradient-to-r from-blue-900/30 via-blue-800/30 to-blue-900/30 border border-blue-700/50 rounded-2xl p-6">
               <p className="text-blue-300 font-bold text-lg">{step.tip}</p>
             </div>
