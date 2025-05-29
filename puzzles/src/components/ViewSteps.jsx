@@ -62,28 +62,25 @@ export default function ViewSteps({ onBack }) {
     }
   }
 
-  // Obtener detalles del puzzle seleccionado
-  const puzzleDetails =
-    puzzles.find((p) => p.name === selectedPuzzle) || {}
+  // Detalles del puzzle seleccionado
+  const puzzleDetails = puzzles.find((p) => p.name === selectedPuzzle) || {}
 
+  // Validación del formulario
   const isFormValid =
     selectedPuzzle &&
     startingPiece &&
-    (!hasMissingPieces || missingPieces)
+    (!hasMissingPieces || missingPieces.trim() !== "")
 
   // 2. Si ya generamos pasos, mostramos el StepsCarousel
   if (showSteps) {
-    const route = solutions[0]?.secuencia || []
-    const connections = route
-      .map((from, i) => ({ from, to: route[i + 1] }))
-      .filter((c) => c.to)
-
+    const firstRoute = solutions[0] || {}
     return (
       <StepsCarousel
-        puzzleName={puzzleDetails.name || "Puzzle Seleccionado"}
-        pieceCount={puzzleDetails.pieces || 0}
-        puzzleType={puzzleDetails.type || "Regular"}
-        connections={connections}
+        puzzleName={puzzleDetails.name}
+        pieceCount={puzzleDetails.pieces}
+        puzzleType={puzzleDetails.type}
+        // Usamos matches directamente del backend
+        connections={firstRoute.matches || []}
         hasMissingPieces={hasMissingPieces}
         missingPieces={missingPieces}
         startingPiece={startingPiece}
@@ -150,10 +147,16 @@ export default function ViewSteps({ onBack }) {
                 className="w-full bg-gray-800/50 border border-gray-600 text-white focus:border-blue-500 focus:ring-blue-500 text-lg py-3 px-4 rounded-xl"
               >
                 <option value="">
-                  {isLoadingPuzzles ? "Cargando puzzles..." : "Selecciona un puzzle..."}
+                  {isLoadingPuzzles
+                    ? "Cargando puzzles..."
+                    : "Selecciona un puzzle..."}
                 </option>
                 {puzzles.map((p) => (
-                  <option key={p.name} value={p.name} className="bg-gray-800">
+                  <option
+                    key={p.name}
+                    value={p.name}
+                    className="bg-gray-800"
+                  >
                     {p.name} - {p.pieces} piezas ({p.type})
                   </option>
                 ))}
@@ -226,16 +229,16 @@ export default function ViewSteps({ onBack }) {
                 placeholder="Ej: Pieza 1, esquina superior izquierda, etc."
                 value={startingPiece}
                 onChange={(e) => setStartingPiece(e.target.value)}
-                className="bg-gray-800/50 border-gray-600 text-white placeholder-gray-400 focus:border-blue-500 focus:ring-blue-500 text-lg py-3 rounded-xl"
+                className="bg-gray-800/50 border border-gray-600 text-white placeholder-gray-400 focus:border-blue-500 focus:ring-blue-500 text-lg py-3 rounded-xl"
               />
             </div>
           </CardContent>
 
           <CardFooter className="pt-8">
             <Button
-              className="w-full bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700 hover:from-blue-600 hover:via-blue-700 hover:to-blue-800 text-white font-bold py-4 text-xl rounded-xl shadow-2xl shadow-blue-500/25 transform hover:scale-105 transition-all duration-300"
               onClick={handleViewSolution}
               disabled={isLoading || !isFormValid}
+              className="w-full bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700 hover:from-blue-600 hover:via-blue-700 hover:to-blue-800 text-white font-bold py-4 text-xl rounded-xl shadow-2xl shadow-blue-500/25 transform hover:scale-105 transition-all duration-300"
             >
               {isLoading ? (
                 <>
