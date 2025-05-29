@@ -39,6 +39,7 @@ export default function StepsCarousel({
     })
 
     // Pasos intermedios: uno por cada conexión
+    console.log("🔧 connections:", connections);
     connections.forEach((c, i) => {
       list.push({
         title: `🔗 Paso ${i + 1}`,

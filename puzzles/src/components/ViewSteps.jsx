@@ -44,10 +44,16 @@ export default function ViewSteps({ onBack }) {
   const handleViewSolution = async () => {
     setIsLoading(true)
     try {
+      console.log("🛰️ Enviando request a backend para armar puzzle:");
+      console.log("   Puzzle seleccionado:", selectedPuzzle);
+      console.log("   Pieza inicial:", startingPiece);
+
       const res = await fetch(
-        `http://localhost:5000/armar/${encodeURIComponent(startingPiece)}`
+        `http://localhost:5000/armar/${encodeURIComponent(selectedPuzzle)}/${encodeURIComponent(startingPiece)}`
       )
-      const data = await res.json()
+      const data = await res.json();
+      console.log("📦 Respuesta recibida del backend:", data);
+
       if (data.success) {
         setSolutions(data.recorridos)
         setShowSteps(true)
@@ -80,7 +86,7 @@ export default function ViewSteps({ onBack }) {
         pieceCount={puzzleDetails.pieces}
         puzzleType={puzzleDetails.type}
         // Usamos matches directamente del backend
-        connections={firstRoute.matches || []}
+        connections={firstRoute.pasos || []}
         hasMissingPieces={hasMissingPieces}
         missingPieces={missingPieces}
         startingPiece={startingPiece}
