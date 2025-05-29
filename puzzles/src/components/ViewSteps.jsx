@@ -1,52 +1,89 @@
+// ViewSteps.jsx
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
 import { Label } from "./ui/label"
 import { Checkbox } from "./ui/checkbox"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "./ui/card"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "./ui/card"
 import StepsCarousel from "./StepsCarrousel"
 import { ArrowLeft, Loader2 } from "lucide-react"
 
-const registeredPuzzles = [
-  { id: 1, name: "Paisaje de montaña", pieces: 1000, type: "Regular" },
-  { id: 2, name: "Torre Eiffel nocturna", pieces: 1500, type: "Irregular" },
-  { id: 3, name: "Gatos jugando", pieces: 500, type: "Regular" },
-  { id: 4, name: "Mapa del mundo", pieces: 2000, type: "Regular" },
-  { id: 5, name: "Abstracto colorido", pieces: 750, type: "Irregular" },
-]
-
 export default function ViewSteps({ onBack }) {
+  const [puzzles, setPuzzles] = useState([])
+  const [isLoadingPuzzles, setIsLoadingPuzzles] = useState(true)
+
   const [hasMissingPieces, setHasMissingPieces] = useState(false)
   const [missingPieces, setMissingPieces] = useState("")
   const [startingPiece, setStartingPiece] = useState("")
+  const [selectedPuzzle, setSelectedPuzzle] = useState("")
+
   const [isLoading, setIsLoading] = useState(false)
   const [showSteps, setShowSteps] = useState(false)
-  const [selectedPuzzle, setSelectedPuzzle] = useState("")
+  const [solutions, setSolutions] = useState([])
+
+  // 1. Al montar, traemos la lista de puzzles
+  useEffect(() => {
+    fetch("http://localhost:5000/puzzles")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) setPuzzles(data.puzzles)
+      })
+      .catch(console.error)
+      .finally(() => setIsLoadingPuzzles(false))
+  }, [])
 
   const handleViewSolution = async () => {
     setIsLoading(true)
-    await new Promise((resolve) => setTimeout(resolve, 3000))
-    setIsLoading(false)
-    setShowSteps(true)
+    try {
+      const res = await fetch(
+        `http://localhost:5000/armar/${encodeURIComponent(startingPiece)}`
+      )
+      const data = await res.json()
+      if (data.success) {
+        setSolutions(data.recorridos)
+        setShowSteps(true)
+      } else {
+        alert("Error al generar la solución")
+      }
+    } catch (e) {
+      console.error(e)
+      alert("Falló la conexión al backend")
+    } finally {
+      setIsLoading(false)
+    }
   }
 
-  const isFormValid = selectedPuzzle && startingPiece && (!hasMissingPieces || missingPieces)
+  // Obtener detalles del puzzle seleccionado
+  const puzzleDetails =
+    puzzles.find((p) => p.name === selectedPuzzle) || {}
 
+  const isFormValid =
+    selectedPuzzle &&
+    startingPiece &&
+    (!hasMissingPieces || missingPieces)
+
+  // 2. Si ya generamos pasos, mostramos el StepsCarousel
   if (showSteps) {
-    const selectedPuzzleData = registeredPuzzles.find((p) => p.id == selectedPuzzle)
+    const route = solutions[0]?.secuencia || []
+    const connections = route
+      .map((from, i) => ({ from, to: route[i + 1] }))
+      .filter((c) => c.to)
 
     return (
       <StepsCarousel
-        puzzleName={selectedPuzzleData?.name || "Puzzle Seleccionado"}
-        pieceCount={selectedPuzzleData?.pieces || "0"}
-        puzzleType={selectedPuzzleData?.type || "Regular"}
-        connections={[
-          { from: "1", to: "2" },
-          { from: "5", to: "10" },
-          { from: "15", to: "20" },
-        ]}
+        puzzleName={puzzleDetails.name || "Puzzle Seleccionado"}
+        pieceCount={puzzleDetails.pieces || 0}
+        puzzleType={puzzleDetails.type || "Regular"}
+        connections={connections}
         hasMissingPieces={hasMissingPieces}
         missingPieces={missingPieces}
         startingPiece={startingPiece}
@@ -55,9 +92,9 @@ export default function ViewSteps({ onBack }) {
     )
   }
 
+  // 3. Formulario de configuración
   return (
     <section className="py-16 bg-gradient-to-b from-black via-gray-900 to-black relative overflow-hidden">
-      {/* Efectos de fondo */}
       <div className="absolute inset-0">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-600/5 rounded-full blur-3xl animate-pulse"></div>
         <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-blue-400/5 rounded-full blur-3xl animate-pulse delay-1000"></div>
@@ -87,14 +124,21 @@ export default function ViewSteps({ onBack }) {
 
         <Card className="max-w-2xl mx-auto bg-gradient-to-br from-gray-900/80 via-gray-800/80 to-gray-900/80 border-blue-900/50 backdrop-blur-xl shadow-2xl shadow-blue-500/10">
           <CardHeader className="text-center pb-8">
-            <CardTitle className="text-white text-3xl font-bold">Configuración de la Guía</CardTitle>
-            <CardDescription className="text-gray-400 text-lg">Personaliza tu experiencia de armado</CardDescription>
+            <CardTitle className="text-white text-3xl font-bold">
+              Configuración de la Guía
+            </CardTitle>
+            <CardDescription className="text-gray-400 text-lg">
+              Personaliza tu experiencia de armado
+            </CardDescription>
           </CardHeader>
 
           <CardContent className="space-y-8">
             {/* Selección de puzzle */}
             <div className="space-y-3">
-              <Label htmlFor="puzzle-select" className="text-white font-bold text-lg flex items-center gap-2">
+              <Label
+                htmlFor="puzzle-select"
+                className="text-white font-bold text-lg flex items-center gap-2"
+              >
                 <span className="text-2xl">🧩</span>
                 Selecciona tu puzzle registrado
               </Label>
@@ -102,14 +146,15 @@ export default function ViewSteps({ onBack }) {
                 id="puzzle-select"
                 value={selectedPuzzle}
                 onChange={(e) => setSelectedPuzzle(e.target.value)}
+                disabled={isLoadingPuzzles}
                 className="w-full bg-gray-800/50 border border-gray-600 text-white focus:border-blue-500 focus:ring-blue-500 text-lg py-3 px-4 rounded-xl"
               >
-                <option value="" className="bg-gray-800">
-                  Selecciona un puzzle...
+                <option value="">
+                  {isLoadingPuzzles ? "Cargando puzzles..." : "Selecciona un puzzle..."}
                 </option>
-                {registeredPuzzles.map((puzzle) => (
-                  <option key={puzzle.id} value={puzzle.id} className="bg-gray-800">
-                    {puzzle.name} - {puzzle.pieces} piezas ({puzzle.type})
+                {puzzles.map((p) => (
+                  <option key={p.name} value={p.name} className="bg-gray-800">
+                    {p.name} - {p.pieces} piezas ({p.type})
                   </option>
                 ))}
               </select>
@@ -118,16 +163,17 @@ export default function ViewSteps({ onBack }) {
                   <p className="text-blue-300 font-medium">
                     📊 Puzzle seleccionado:{" "}
                     <span className="text-blue-400 font-bold">
-                      {registeredPuzzles.find((p) => p.id == selectedPuzzle)?.name}
+                      {puzzleDetails.name}
                     </span>
-                    <br />🔢 Total de piezas:{" "}
+                    <br />
+                    🔢 Total de piezas:{" "}
                     <span className="text-blue-400 font-bold">
-                      {registeredPuzzles.find((p) => p.id == selectedPuzzle)?.pieces}
+                      {puzzleDetails.pieces}
                     </span>
                     <br />
                     ⚙️ Tipo:{" "}
                     <span className="text-blue-400 font-bold">
-                      {registeredPuzzles.find((p) => p.id == selectedPuzzle)?.type}
+                      {puzzleDetails.type}
                     </span>
                   </p>
                 </div>
@@ -143,15 +189,19 @@ export default function ViewSteps({ onBack }) {
                   onCheckedChange={setHasMissingPieces}
                   className="border-gray-600 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
                 />
-                <Label htmlFor="missing-pieces" className="text-white font-bold text-lg flex items-center gap-2">
+                <Label
+                  htmlFor="missing-pieces"
+                  className="text-white font-bold text-lg flex items-center gap-2"
+                >
                   <span className="text-2xl">❌</span>
                   ¿Falta alguna pieza?
                 </Label>
               </div>
-
               {hasMissingPieces && (
                 <div className="space-y-2 ml-8">
-                  <Label className="text-gray-300 font-medium">¿Qué pieza(s) faltan?</Label>
+                  <Label className="text-gray-300 font-medium">
+                    ¿Qué pieza(s) faltan?
+                  </Label>
                   <Input
                     placeholder="Ej: Pieza 45, Pieza 123, etc."
                     value={missingPieces}
@@ -164,7 +214,10 @@ export default function ViewSteps({ onBack }) {
 
             {/* Pieza de inicio */}
             <div className="space-y-3">
-              <Label htmlFor="starting-piece" className="text-white font-bold text-lg flex items-center gap-2">
+              <Label
+                htmlFor="starting-piece"
+                className="text-white font-bold text-lg flex items-center gap-2"
+              >
                 <span className="text-2xl">🎯</span>
                 ¿A partir de qué pieza quieres empezar?
               </Label>
@@ -186,7 +239,8 @@ export default function ViewSteps({ onBack }) {
             >
               {isLoading ? (
                 <>
-                  <Loader2 className="mr-3 h-6 w-6 animate-spin" />🔮 GENERANDO SOLUCIÓN...
+                  <Loader2 className="mr-3 h-6 w-6 animate-spin" />
+                  🔮 GENERANDO SOLUCIÓN...
                 </>
               ) : (
                 "🚀 VER SOLUCIÓN"
