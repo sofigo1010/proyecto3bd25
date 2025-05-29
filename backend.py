@@ -109,59 +109,48 @@ def obtener_piezas(nombre_puzzle):
 @app.route('/armar/<puzzle>/<pieza_inicial>', methods=['GET'])
 def armar_puzzle(puzzle, pieza_inicial):
     try:
-        print(f"🧩 Recibiendo request para puzzle='{puzzle}' y pieza='{pieza_inicial}'")
-        
         query = """
-        MATCH (p:Puzzle {name: $puzzle})<-[:PERTENECE]-(inicio:Piece {label: $pieza_inicial})
-        MATCH path = (inicio)-[:MATCHES*0..10]->(destino)
-        WHERE (destino)-[:PERTENECE]->(p)
+        MATCH path = (inicio:Piece {label: $pieza_inicial})-[:MATCHES*1..10]->(destino)
+        WHERE ALL(n IN nodes(path) WHERE single(x IN nodes(path) WHERE x = n))
         RETURN 
-          [node IN nodes(path) | node.label] AS secuencia,
-          relationships(path) AS relaciones,
-          length(path) AS longitud
+            [node IN nodes(path) | node.label] AS secuencia,
+            [rel IN relationships(path) | {
+                from: startNode(rel).label,
+                to: endNode(rel).label,
+                sidefrom: rel.sidefrom,
+                sideto: rel.sideto,
+                comment: rel.comment
+            }] AS pasos,
+            length(path) AS longitud
         ORDER BY longitud DESC
-        LIMIT 10
+        LIMIT 20
         """
 
-        armado = []
         with driver.session() as session:
-            result = session.run(query, puzzle=puzzle, pieza_inicial=pieza_inicial)
-            for record in result:
-                pasos = []
-                secuencia = record["secuencia"]
-                relaciones = record["relaciones"]
-                
-                for i in range(len(relaciones)):
-                    match = relaciones[i]
-                    pasos.append({
-                        "from": secuencia[i],
-                        "to": secuencia[i+1],
-                        "sidefrom": match.get("sidefrom"),
-                        "sideto": match.get("sideto"),
-                        "comment": match.get("comment")
-                    })
-
+            result = session.run(query, pieza_inicial=pieza_inicial)
+            armado = []
+            for r in result:
                 armado.append({
-                    "secuencia": secuencia,
-                    "pasos": pasos
+                    "secuencia": r["secuencia"],
+                    "pasos": r["pasos"]
                 })
 
         if not armado:
             return jsonify({
-                "success": False,
-                "error": f"No se encontraron caminos desde '{pieza_inicial}' en puzzle '{puzzle}'"
+                "error": f"No se encontraron caminos desde '{pieza_inicial}' en puzzle '{puzzle}'",
+                "success": False
             }), 404
 
         return jsonify({
-            "success": True,
             "pieza_inicial": pieza_inicial,
             "puzzle": puzzle,
             "recorridos": armado,
+            "success": True,
             "total_rutas": len(armado)
         })
 
     except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
+        return jsonify({"error": str(e), "success": False}), 500
 
 # 6. Obtener todos los Puzzles
 @app.route('/puzzles', methods=['GET'])
