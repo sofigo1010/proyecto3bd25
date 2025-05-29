@@ -105,7 +105,7 @@ export default function ViewSteps({ onBack }) {
           <Button
             onClick={onBack}
             variant="outline"
-            className="border-gray-600 text-gray-300 hover:bg-gray-800 hover:text-white"
+            className="bg-gray-800 text-gray-300 hover:bg-gray-800 hover:text-white"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Volver al menú
