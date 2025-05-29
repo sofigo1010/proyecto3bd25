@@ -30,18 +30,24 @@ def crear_puzzle():
         data = request.json
         query = """
         MERGE (p:Puzzle {name: $name})
-        SET p.type = $type, p.theme = $theme, pieces = $pieces
+        SET p.type   = $type,
+            p.theme  = $theme,
+            p.pieces = $pieces
         RETURN p
         """
+        params = {
+            'name':   data['name'],
+            'type':   data.get('type', 'Regular'),
+            'theme':  data.get('theme', ''),
+            'pieces': data.get('pieces', 0)
+        }
         with driver.session() as session:
-            session.run(query, 
-                       name=data['name'], 
-                       type=data.get('type', 'Regular'), 
-                       theme=data.get('theme', ''),
-                       pieces=data.get('pieces', 0))
+            session.run(query, **params)
         return jsonify({"mensaje": "Puzzle creado exitosamente", "success": True})
     except Exception as e:
-        return jsonify({"error": str(e), "success": False}), 500
+        # Loguea el stack trace en consola y devuelve un mensaje genérico
+        app.logger.error("Error en crear_puzzle", exc_info=True)
+        return jsonify({"error": "Error interno al crear puzzle", "success": False}), 500
 
 # 2. Crear Pieza
 @app.route('/pieza', methods=['POST'])
